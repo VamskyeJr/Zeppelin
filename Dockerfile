@@ -3,51 +3,47 @@ FROM node:24 AS build
 ARG COMMIT_HASH
 ARG BUILD_TIME
 
-RUN mkdir /zeppelin
-RUN chown node:node /zeppelin
-
-# Install pnpm
-RUN npm install -g pnpm@10.19.0
-
-USER node
-
-# Install dependencies before copying over any other files
-COPY --chown=node:node package.json pnpm-workspace.yaml pnpm-lock.yaml /zeppelin
-RUN mkdir /zeppelin/backend
-COPY --chown=node:node backend/package.json /zeppelin/backend
-RUN mkdir /zeppelin/shared
-COPY --chown=node:node shared/package.json /zeppelin/shared
-RUN mkdir /zeppelin/dashboard
-COPY --chown=node:node dashboard/package.json /zeppelin/dashboard
-
 WORKDIR /zeppelin
+
+# Enable pnpm via corepack (recommended)
+RUN corepack enable && corepack prepare pnpm@10.19.0 --activate
+
+# Copy only lock & package files first (better caching)
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+
+COPY backend/package.json backend/package.json
+COPY shared/package.json shared/package.json
+COPY dashboard/package.json dashboard/package.json
+
+# Install all workspace dependencies
 RUN CI=true pnpm install
 
-COPY --chown=node:node . /zeppelin
+# Copy rest of project
+COPY . .
 
 # Build backend
-WORKDIR /zeppelin/backend
-RUN pnpm run build
+RUN pnpm --filter backend run build
 
 # Build dashboard
-WORKDIR /zeppelin/dashboard
-RUN pnpm run build
+RUN pnpm --filter dashboard run build
 
-# Only keep prod dependencies
-WORKDIR /zeppelin
-RUN CI=true pnpm install --prod
+# Prune to production deps only
+RUN pnpm prune --prod
 
 # Add version info
-RUN echo "${COMMIT_HASH}" > /zeppelin/.commit-hash
-RUN echo "${BUILD_TIME}" > /zeppelin/.build-time
+RUN echo "${COMMIT_HASH}" > .commit-hash
+RUN echo "${BUILD_TIME}" > .build-time
 
-# --- Main image ---
 
+# --- Runtime image ---
 FROM node:24-alpine AS main
 
-RUN npm install -g pnpm@10.19.0
-
-USER node
-COPY --from=build --chown=node:node /zeppelin /zeppelin
-
 WORKDIR /zeppelin
+
+RUN corepack enable && corepack prepare pnpm@10.19.0 --activate
+
+COPY --from=build /zeppelin /zeppelin
+
+EXPOSE 3000
+
+CMD ["pnpm", "--filter", "backend", "start"]
