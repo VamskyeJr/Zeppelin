@@ -10,7 +10,9 @@ import { initGuildsAPI } from "./guilds/index.js";
 import { clientError, error, notFound } from "./responses.js";
 import { startBackgroundTasks } from "./tasks.js";
 
-const apiPathPrefix = env.API_PATH_PREFIX || (env.NODE_ENV === "development" ? "/api" : "");
+import path from "path";
+
+const apiPathPrefix = env.API_PATH_PREFIX || "/api";
 
 const app = express();
 
@@ -40,6 +42,13 @@ rootRouter.get("/", (req, res) => {
 
 app.use(apiPathPrefix, rootRouter);
 
+// Serve Dashboard
+const dashboardPath = path.resolve(process.cwd(), "../dashboard/dist");
+app.use(express.static(dashboardPath));
+app.get("*", (req, res) => {
+  res.sendFile(path.join(dashboardPath, "index.html"));
+});
+
 // Error response
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err, req, res, next) => {
@@ -51,13 +60,7 @@ app.use((err, req, res, next) => {
   }
 });
 
-// 404 response
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-app.use((req, res, next) => {
-  return notFound(res);
-});
-
-const port = 3001;
+const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 app.listen(port, "0.0.0.0", () => console.log(`API server listening on port ${port}`)); // tslint:disable-line
 
 startBackgroundTasks();
