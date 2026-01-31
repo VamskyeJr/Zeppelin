@@ -59,7 +59,7 @@ export async function actualForceBanCmd(
   // Confirm the action
   pluginData.state.common.sendSuccessMessage(
     context,
-    `[Case #${createdCase.case_number}] ${renderUsername(user)} has been **forcebanned**.`,
+    `\`[Case #${createdCase.case_number}]\` ${renderUsername(user)} has been **forcebanned**.`,
   );
 
   // Log the action

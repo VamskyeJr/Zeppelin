@@ -68,6 +68,6 @@ export async function actualWarnCmd(
 
   await pluginData.state.common.sendSuccessMessage(
     context,
-    `[Case #${warnResult.case.case_number}] ${renderUsername(memberToWarn.user)} has been **warned**.`,
+    `\`[Case #${warnResult.case.case_number}]\` ${renderUsername(memberToWarn.user)} has been **warned**.`,
   );
 }

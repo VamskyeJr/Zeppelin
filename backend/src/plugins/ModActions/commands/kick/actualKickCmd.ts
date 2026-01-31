@@ -94,7 +94,7 @@ export async function actualKickCmd(
   }
 
   // Confirm the action to the moderator
-  const response = `[Case #${kickResult.case.case_number}] ${renderUsername(memberToKick.user)} has been **kicked**.`;
+  const response = `\`[Case #${kickResult.case.case_number}]\` ${renderUsername(memberToKick.user)} has been **kicked**.`;
 
   pluginData.state.common.sendSuccessMessage(context, response);
 }

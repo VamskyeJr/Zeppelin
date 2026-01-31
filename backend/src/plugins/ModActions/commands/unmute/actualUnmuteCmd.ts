@@ -45,9 +45,9 @@ export async function actualUnmuteCmd(
   let response: string;
   if (time) {
      const timeUntilUnmute = time && humanizeDuration(time);
-     response = `[Case #${result.case.case_number}] ${renderUsername(user)} has been **scheduled to be unmuted** in ${timeUntilUnmute}.`;
+     response = `\`[Case #${result.case.case_number}]\` ${renderUsername(user)} has been **scheduled to be unmuted** in ${timeUntilUnmute}.`;
   } else {
-    response = `[Case #${result.case.case_number}] ${renderUsername(user)} has been **unmuted**.`;
+    response = `\`[Case #${result.case.case_number}]\` ${renderUsername(user)} has been **unmuted**.`;
   }
 
   pluginData.state.common.sendSuccessMessage(context, response);

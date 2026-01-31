@@ -58,7 +58,7 @@ export async function actualUnbanCmd(
   // Confirm the action
   pluginData.state.common.sendSuccessMessage(
     context,
-    `[Case #${createdCase.case_number}] ${renderUsername(user)} has been **unbanned**.`,
+    `\`[Case #${createdCase.case_number}]\` ${renderUsername(user)} has been **unbanned**.`,
   );
 
   // Log the action

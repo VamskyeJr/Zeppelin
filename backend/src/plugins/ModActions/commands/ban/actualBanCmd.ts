@@ -127,7 +127,7 @@ export async function actualBanCmd(
 
       pluginData.state.common.sendSuccessMessage(
         context,
-        `[Case #${createdCase.case_number}] ${renderUsername(user)}'s ban has been **updated**.`,
+        `\`[Case #${createdCase.case_number}]\` ${renderUsername(user)}'s ban has been **updated**.`,
       );
       lock.unlock();
       return;
@@ -181,7 +181,7 @@ export async function actualBanCmd(
 
   // Confirm the action to the moderator
   const action = forceban ? "forcebanned" : "banned";
-  const response = `[Case #${banResult.case.case_number}] ${renderUsername(user)} has been **${action}**.`;
+  const response = `\`[Case #${banResult.case.case_number}]\` ${renderUsername(user)} has been **${action}**.`;
 
   lock.unlock();
   pluginData.state.common.sendSuccessMessage(context, response);

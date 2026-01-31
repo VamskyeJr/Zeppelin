@@ -82,9 +82,9 @@ export async function actualMuteCmd(
   // Confirm the action to the moderator
   let response: string;
   if (muteResult.updatedExistingMute) {
-    response = `[Case #${muteResult.case.case_number}] ${renderUsername(user)}'s mute has been **updated**.`;
+    response = `\`[Case #${muteResult.case.case_number}]\` ${renderUsername(user)}'s mute has been **updated**.`;
   } else {
-    response = `[Case #${muteResult.case.case_number}] ${renderUsername(user)} has been **muted**.`;
+    response = `\`[Case #${muteResult.case.case_number}]\` ${renderUsername(user)} has been **muted**.`;
   }
   pluginData.state.common.sendSuccessMessage(context, response);
 }

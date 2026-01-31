@@ -43,7 +43,7 @@ export async function actualNoteCmd(
 
   pluginData.state.common.sendSuccessMessage(
     context,
-    `[Case #${createdCase.case_number}] Note added for ${renderUsername(user)}.`,
+    `\`[Case #${createdCase.case_number}]\` Note added for ${renderUsername(user)}.`,
     undefined,
     undefined,
     true,
