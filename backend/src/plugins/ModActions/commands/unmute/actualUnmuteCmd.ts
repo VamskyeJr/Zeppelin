@@ -42,22 +42,13 @@ export async function actualUnmuteCmd(
   }
 
   // Confirm the action to the moderator
+  let response: string;
   if (time) {
-    const timeUntilUnmute = time && humanizeDuration(time);
-    pluginData.state.common.sendSuccessMessage(
-      context,
-      asSingleLine(`
-        Unmuting **${renderUsername(user)}**
-        in ${timeUntilUnmute} (Case #${result.case.case_number})
-      `),
-    );
+     const timeUntilUnmute = time && humanizeDuration(time);
+     response = `[Case #${result.case.case_number}] ${renderUsername(user)} has been **scheduled to be unmuted** in ${timeUntilUnmute}.`;
   } else {
-    pluginData.state.common.sendSuccessMessage(
-      context,
-      asSingleLine(`
-        Unmuted **${renderUsername(user)}**
-        (Case #${result.case.case_number})
-      `),
-    );
+    response = `[Case #${result.case.case_number}] ${renderUsername(user)} has been **unmuted**.`;
   }
+
+  pluginData.state.common.sendSuccessMessage(context, response);
 }

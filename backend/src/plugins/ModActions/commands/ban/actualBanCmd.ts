@@ -127,7 +127,7 @@ export async function actualBanCmd(
 
       pluginData.state.common.sendSuccessMessage(
         context,
-        `Ban updated to ${time ? "expire in " + humanizeDuration(time) + " from now" : "indefinite"}`,
+        `[Case #${createdCase.case_number}] ${renderUsername(user)}'s ban has been **updated**.`,
       );
       lock.unlock();
       return;
@@ -180,13 +180,8 @@ export async function actualBanCmd(
   }
 
   // Confirm the action to the moderator
-  let response = "";
-  if (!forceban) {
-    response = `Banned **${renderUsername(user)}** ${forTime}(Case #${banResult.case.case_number})`;
-    if (banResult.notifyResult.text) response += ` (${banResult.notifyResult.text})`;
-  } else {
-    response = `Member forcebanned ${forTime}(Case #${banResult.case.case_number})`;
-  }
+  const action = forceban ? "forcebanned" : "banned";
+  const response = `[Case #${banResult.case.case_number}] ${renderUsername(user)} has been **${action}**.`;
 
   lock.unlock();
   pluginData.state.common.sendSuccessMessage(context, response);

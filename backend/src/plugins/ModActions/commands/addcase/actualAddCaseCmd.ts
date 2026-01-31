@@ -49,10 +49,10 @@ export async function actualAddCaseCmd(
   if (user) {
     pluginData.state.common.sendSuccessMessage(
       context,
-      `Case #${theCase.case_number} created for **${renderUsername(user)}**`,
+      `[Case #${theCase.case_number}] Case created for ${renderUsername(user)}.`,
     );
   } else {
-    pluginData.state.common.sendSuccessMessage(context, `Case #${theCase.case_number} created`);
+    pluginData.state.common.sendSuccessMessage(context, `[Case #${theCase.case_number}] Case created.`);
   }
 
   // Log the action

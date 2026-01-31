@@ -3,7 +3,7 @@ import { GuildPluginData } from "vety";
 import { CaseTypes } from "../../../../data/CaseTypes.js";
 import { LogType } from "../../../../data/LogType.js";
 import { clearExpiringTempban } from "../../../../data/loops/expiringTempbansLoop.js";
-import { UnknownUser } from "../../../../utils.js";
+import { UnknownUser, renderUsername } from "../../../../utils.js";
 import { CasesPlugin } from "../../../Cases/CasesPlugin.js";
 import { LogsPlugin } from "../../../Logs/LogsPlugin.js";
 import { handleAttachmentLinkDetectionAndGetRestriction } from "../../functions/attachmentLinkReaction.js";
@@ -56,7 +56,10 @@ export async function actualUnbanCmd(
   }
 
   // Confirm the action
-  pluginData.state.common.sendSuccessMessage(context, `Member unbanned (Case #${createdCase.case_number})`);
+  pluginData.state.common.sendSuccessMessage(
+    context,
+    `[Case #${createdCase.case_number}] ${renderUsername(user)} has been **unbanned**.`,
+  );
 
   // Log the action
   pluginData.getPlugin(LogsPlugin).logMemberUnban({

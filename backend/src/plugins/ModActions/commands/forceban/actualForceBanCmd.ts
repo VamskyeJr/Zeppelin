@@ -2,7 +2,7 @@ import { Attachment, ChatInputCommandInteraction, GuildMember, Message, Snowflak
 import { GuildPluginData } from "vety";
 import { CaseTypes } from "../../../../data/CaseTypes.js";
 import { LogType } from "../../../../data/LogType.js";
-import { DAYS, MINUTES, UnknownUser } from "../../../../utils.js";
+import { DAYS, MINUTES, UnknownUser, renderUsername } from "../../../../utils.js";
 import { CasesPlugin } from "../../../Cases/CasesPlugin.js";
 import { LogsPlugin } from "../../../Logs/LogsPlugin.js";
 import { handleAttachmentLinkDetectionAndGetRestriction } from "../../functions/attachmentLinkReaction.js";
@@ -57,7 +57,10 @@ export async function actualForceBanCmd(
   });
 
   // Confirm the action
-  pluginData.state.common.sendSuccessMessage(context, `Member forcebanned (Case #${createdCase.case_number})`);
+  pluginData.state.common.sendSuccessMessage(
+    context,
+    `[Case #${createdCase.case_number}] ${renderUsername(user)} has been **forcebanned**.`,
+  );
 
   // Log the action
   pluginData.getPlugin(LogsPlugin).logMemberForceban({

@@ -56,5 +56,5 @@ export async function updateCase(
     note: formattedNote,
   });
 
-  pluginData.state.common.sendSuccessMessage(context, `Case \`#${theCase.case_number}\` updated`);
+  pluginData.state.common.sendSuccessMessage(context, `[Case #${theCase.case_number}] Case updated.`);
 }
