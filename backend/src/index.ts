@@ -1,6 +1,9 @@
 // KEEP THIS AS FIRST IMPORT
 // See comment in module for details
 import "./threadsSignalFix.js";
+import { ActivityType } from "discord.js";
+
+
 
 import {
   Client,
@@ -355,6 +358,9 @@ connect().then(async () => {
             }
 
             // Remove deprecated properties some may still have in their config
+            client.user?.setPresence({
+  activities: [{ name: "Roblox fuck everything up", type: ActivityType.Watching }],
+});
             delete loaded.success_emoji;
             delete loaded.error_emoji;
 
