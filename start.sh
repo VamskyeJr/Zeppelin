@@ -1,6 +1,10 @@
 #!/bin/sh
 echo "Starting Zeppelin Services..."
 
+# Run Migrations
+echo "Running Database Migrations..."
+cd /zeppelin/backend && pnpm run migrate-prod
+
 # Start API (Background)
 # This serves the Backend API and the Frontend Dashboard (via static files)
 cd /zeppelin/backend && pnpm run start-api-prod &
