@@ -53,6 +53,7 @@ COPY --from=build --chown=node:node /zeppelin /zeppelin
 WORKDIR /zeppelin
 
 COPY start.sh /zeppelin/start.sh
+RUN sed -i 's/\r$//' /zeppelin/start.sh
 RUN chmod +x /zeppelin/start.sh
 
 CMD ["/zeppelin/start.sh"]
