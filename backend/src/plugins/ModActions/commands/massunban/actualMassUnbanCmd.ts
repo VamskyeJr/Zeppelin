@@ -10,6 +10,7 @@ import { handleAttachmentLinkDetectionAndGetRestriction } from "../../functions/
 import { formatReasonWithMessageLinkForAttachments } from "../../functions/formatReasonForAttachments.js";
 import { ignoreEvent } from "../../functions/ignoreEvent.js";
 import { isBanned } from "../../functions/isBanned.js";
+import { parseReason } from "../../functions/parseReason.js";
 import { IgnoredEventType, ModActionsPluginType } from "../../types.js";
 
 export async function actualMassUnbanCmd(
@@ -30,7 +31,9 @@ export async function actualMassUnbanCmd(
     return;
   }
 
-  const unbanReason = await formatReasonWithMessageLinkForAttachments(pluginData, reason, context, attachments);
+  const config = pluginData.config.get();
+  const parsedReason = parseReason(config, reason) ?? reason;
+  const unbanReason = await formatReasonWithMessageLinkForAttachments(pluginData, parsedReason, context, attachments);
 
   // Ignore automatic unban cases and logs for these users
   // We'll create our own cases below and post a single "mass unbanned" log instead

@@ -55,7 +55,7 @@ import { RemindersPlugin } from "./Reminders/RemindersPlugin.js";
 import { remindersPluginDocs } from "./Reminders/docs.js";
 import { RoleButtonsPlugin } from "./RoleButtons/RoleButtonsPlugin.js";
 import { roleButtonsPluginDocs } from "./RoleButtons/docs.js";
-import { SocialMediaPosterPlugin } from "./SocialMediaPoster/SocialMediaPosterPlugin.js";
+
 import { RoleManagerPlugin } from "./RoleManager/RoleManagerPlugin.js";
 import { roleManagerPluginDocs } from "./RoleManager/docs.js";
 import { RolesPlugin } from "./Roles/RolesPlugin.js";
@@ -193,11 +193,7 @@ export const availableGuildPlugins: ZeppelinGuildPluginInfo[] = [
     plugin: RoleButtonsPlugin,
     docs: roleButtonsPluginDocs,
   },
-  {
-    plugin: SocialMediaPosterPlugin,
-    // @ts-ignore
-    docs: undefined,
-  },
+
   {
     plugin: RoleManagerPlugin,
     docs: roleManagerPluginDocs,

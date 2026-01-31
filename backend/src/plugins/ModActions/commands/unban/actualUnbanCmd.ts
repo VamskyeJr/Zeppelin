@@ -9,6 +9,7 @@ import { LogsPlugin } from "../../../Logs/LogsPlugin.js";
 import { handleAttachmentLinkDetectionAndGetRestriction } from "../../functions/attachmentLinkReaction.js";
 import { formatReasonWithMessageLinkForAttachments } from "../../functions/formatReasonForAttachments.js";
 import { ignoreEvent } from "../../functions/ignoreEvent.js";
+import { parseReason } from "../../functions/parseReason.js";
 import { IgnoredEventType, ModActionsPluginType } from "../../types.js";
 
 export async function actualUnbanCmd(
@@ -24,8 +25,10 @@ export async function actualUnbanCmd(
     return;
   }
 
+  const config = pluginData.config.get();
+  const parsedReason = parseReason(config, reason) ?? reason;
   pluginData.state.serverLogs.ignoreLog(LogType.MEMBER_UNBAN, user.id);
-  const formattedReason = await formatReasonWithMessageLinkForAttachments(pluginData, reason, context, attachments);
+  const formattedReason = await formatReasonWithMessageLinkForAttachments(pluginData, parsedReason, context, attachments);
 
   try {
     ignoreEvent(pluginData, IgnoredEventType.Unban, user.id);

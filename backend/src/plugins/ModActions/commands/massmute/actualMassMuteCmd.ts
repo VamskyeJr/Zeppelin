@@ -11,6 +11,7 @@ import {
   formatReasonWithAttachments,
   formatReasonWithMessageLinkForAttachments,
 } from "../../functions/formatReasonForAttachments.js";
+import { parseReason } from "../../functions/parseReason.js";
 import { ModActionsPluginType } from "../../types.js";
 
 export async function actualMassMuteCmd(
@@ -31,8 +32,10 @@ export async function actualMassMuteCmd(
     return;
   }
 
-  const muteReason = await formatReasonWithMessageLinkForAttachments(pluginData, reason, context, attachments);
-  const muteReasonWithAttachments = formatReasonWithAttachments(reason, attachments);
+  const config = pluginData.config.get();
+  const parsedReason = parseReason(config, reason) ?? reason;
+  const muteReason = await formatReasonWithMessageLinkForAttachments(pluginData, parsedReason, context, attachments);
+  const muteReasonWithAttachments = formatReasonWithAttachments(parsedReason, attachments);
 
   // Verify we can act upon all users
   for (const userId of userIds) {

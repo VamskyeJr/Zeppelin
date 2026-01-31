@@ -5,6 +5,7 @@ import { UnknownUser, asSingleLine, renderUsername } from "../../../../utils.js"
 import { MutesPlugin } from "../../../Mutes/MutesPlugin.js";
 import { handleAttachmentLinkDetectionAndGetRestriction } from "../../functions/attachmentLinkReaction.js";
 import { formatReasonWithMessageLinkForAttachments } from "../../functions/formatReasonForAttachments.js";
+import { parseReason } from "../../functions/parseReason.js";
 import { ModActionsPluginType } from "../../types.js";
 
 export async function actualUnmuteCmd(
@@ -21,9 +22,11 @@ export async function actualUnmuteCmd(
     return;
   }
 
+  const config = pluginData.config.get();
+  const parsedReason = reason ? (parseReason(config, reason) ?? reason) : reason;
   const formattedReason =
-    reason || attachments.length > 0
-      ? await formatReasonWithMessageLinkForAttachments(pluginData, reason ?? "", context, attachments)
+    parsedReason || attachments.length > 0
+      ? await formatReasonWithMessageLinkForAttachments(pluginData, parsedReason ?? "", context, attachments)
       : undefined;
 
   const mutesPlugin = pluginData.getPlugin(MutesPlugin);

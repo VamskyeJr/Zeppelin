@@ -1,0 +1,673 @@
+From 80c195f25ee2c01d4b465069c3f436b1069abff9 Mon Sep 17 00:00:00 2001
+From: almeidx <github@almeidx.dev>
+Date: Thu, 28 Dec 2023 10:40:05 +0000
+Subject: [PATCH 1/2] mod actions reason aliases
+
+Co-authored-by: metal0 <metal@i0.tf>
+---
+ .../plugins/ModActions/ModActionsPlugin.ts    | 16 ++++++++++
+ .../plugins/ModActions/commands/AddCaseCmd.ts |  7 ++---
+ .../ModActions/commands/ForcebanCmd.ts        |  5 +--
+ .../ModActions/commands/MassUnbanCmd.ts       |  8 +++--
+ .../ModActions/commands/MassmuteCmd.ts        |  7 +++--
+ .../plugins/ModActions/commands/UnbanCmd.ts   |  5 +--
+ .../plugins/ModActions/commands/WarnCmd.ts    |  3 +-
+ .../functions/actualKickMemberCmd.ts          | 31 ++++++++++---------
+ .../ModActions/functions/actualMuteUserCmd.ts |  6 +++-
+ .../functions/actualUnmuteUserCmd.ts          |  6 +++-
+ .../plugins/ModActions/functions/banUserId.ts |  2 ++
+ .../ModActions/functions/kickMember.ts        |  2 ++
+ .../ModActions/functions/parseReason.ts       | 14 +++++++++
+ .../ModActions/functions/updateCase.ts        |  7 ++++-
+ .../ModActions/functions/warnMember.ts        |  6 ++--
+ backend/src/plugins/ModActions/types.ts       |  1 +
+ 16 files changed, 92 insertions(+), 34 deletions(-)
+ create mode 100644 backend/src/plugins/ModActions/functions/parseReason.ts
+
+diff --git a/backend/src/plugins/ModActions/ModActionsPlugin.ts b/backend/src/plugins/ModActions/ModActionsPlugin.ts
+index ba19a0b03..e112e59bf 100644
+--- a/backend/src/plugins/ModActions/ModActionsPlugin.ts
++++ b/backend/src/plugins/ModActions/ModActionsPlugin.ts
+@@ -47,6 +47,7 @@ import { BanOptions, ConfigSchema, KickOptions, ModActionsPluginType, WarnOption
+ import { LogsPlugin } from "../Logs/LogsPlugin";
+ import { onGuildEvent } from "../../data/GuildEvents";
+ import { clearTempban } from "./functions/clearTempban";
++import { ConfigPreprocessorFn } from "knub/dist/config/configTypes";
+
+ const defaultOptions = {
+   config: {
+@@ -84,6 +85,7 @@ const defaultOptions = {
+     can_deletecase: false,
+     can_act_as_other: false,
+     create_cases_for_manual_actions: true,
++    reason_aliases: {},
+   },
+   overrides: [
+     {
+@@ -112,6 +114,19 @@ const defaultOptions = {
+   ],
+ };
+
++/**
++ * Config preprocessor to fix values
++ */
++const configPreprocessor: ConfigPreprocessorFn<ModActionsPluginType> = (options) => {
++  if (options.config?.reason_aliases) {
++    options.config.reason_aliases = Object.fromEntries(
++      Object.entries(options.config.reason_aliases).map(([k, v]) => [k.toLowerCase(), v]),
++    );
++  }
++
++  return options;
++};
++
+ export const ModActionsPlugin = zeppelinGuildPlugin<ModActionsPluginType>()({
+   name: "mod_actions",
+   showInDocs: true,
+@@ -125,6 +140,7 @@ export const ModActionsPlugin = zeppelinGuildPlugin<ModActionsPluginType>()({
+   dependencies: () => [TimeAndDatePlugin, CasesPlugin, MutesPlugin, LogsPlugin],
+   configSchema: ConfigSchema,
+   defaultOptions,
++  configPreprocessor,
+
+   events: [CreateBanCaseOnManualBanEvt, CreateUnbanCaseOnManualUnbanEvt, PostAlertOnMemberJoinEvt],
+
+diff --git a/backend/src/plugins/ModActions/commands/AddCaseCmd.ts b/backend/src/plugins/ModActions/commands/AddCaseCmd.ts
+index b28b1eeb8..22d2ef0f9 100644
+--- a/backend/src/plugins/ModActions/commands/AddCaseCmd.ts
++++ b/backend/src/plugins/ModActions/commands/AddCaseCmd.ts
+@@ -1,14 +1,13 @@
+-import { userToTemplateSafeUser } from "../../../utils/templateSafeObjects";
+ import { commandTypeHelpers as ct } from "../../../commandTypes";
+ import { CaseTypes } from "../../../data/CaseTypes";
+ import { Case } from "../../../data/entities/Case";
+-import { LogType } from "../../../data/LogType";
+ import { CasesPlugin } from "../../../plugins/Cases/CasesPlugin";
+ import { canActOn, hasPermission, sendErrorMessage, sendSuccessMessage } from "../../../pluginUtils";
+ import { resolveMember, resolveUser } from "../../../utils";
+ import { formatReasonWithAttachments } from "../functions/formatReasonWithAttachments";
+ import { modActionsCmd } from "../types";
+ import { LogsPlugin } from "../../Logs/LogsPlugin";
++import { parseReason } from "../functions/parseReason";
+
+ const opts = {
+   mod: ct.member({ option: true }),
+@@ -60,8 +59,8 @@ export const AddCaseCmd = modActionsCmd({
+       sendErrorMessage(pluginData, msg.channel, "Cannot add case: invalid case type");
+       return;
+     }
+-
+-    const reason = formatReasonWithAttachments(args.reason, [...msg.attachments.values()]);
++    const config = pluginData.config.get();
++    const reason = formatReasonWithAttachments(parseReason(config, args.reason), [...msg.attachments.values()]);
+
+     // Create the case
+     const casesPlugin = pluginData.getPlugin(CasesPlugin);
+diff --git a/backend/src/plugins/ModActions/commands/ForcebanCmd.ts b/backend/src/plugins/ModActions/commands/ForcebanCmd.ts
+index 1df592b61..776e7fb32 100644
+--- a/backend/src/plugins/ModActions/commands/ForcebanCmd.ts
++++ b/backend/src/plugins/ModActions/commands/ForcebanCmd.ts
+@@ -11,6 +11,7 @@ import { ignoreEvent } from "../functions/ignoreEvent";
+ import { isBanned } from "../functions/isBanned";
+ import { IgnoredEventType, modActionsCmd } from "../types";
+ import { LogsPlugin } from "../../Logs/LogsPlugin";
++import { parseReason } from "../functions/parseReason";
+
+ const opts = {
+   mod: ct.member({ option: true }),
+@@ -61,8 +62,8 @@ export const ForcebanCmd = modActionsCmd({
+
+       mod = args.mod;
+     }
+-
+-    const reason = formatReasonWithAttachments(args.reason, [...msg.attachments.values()]);
++    const config = pluginData.config.get();
++    const reason = formatReasonWithAttachments(parseReason(config, args.reason), [...msg.attachments.values()]);
+
+     ignoreEvent(pluginData, IgnoredEventType.Ban, user.id);
+     pluginData.state.serverLogs.ignoreLog(LogType.MEMBER_BAN, user.id);
+diff --git a/backend/src/plugins/ModActions/commands/MassUnbanCmd.ts b/backend/src/plugins/ModActions/commands/MassUnbanCmd.ts
+index 83044c85c..6a9e8d4cc 100644
+--- a/backend/src/plugins/ModActions/commands/MassUnbanCmd.ts
++++ b/backend/src/plugins/ModActions/commands/MassUnbanCmd.ts
+@@ -1,6 +1,5 @@
+ import { Snowflake, TextChannel } from "discord.js";
+ import { waitForReply } from "knub/dist/helpers";
+-import { userToTemplateSafeUser } from "../../../utils/templateSafeObjects";
+ import { commandTypeHelpers as ct } from "../../../commandTypes";
+ import { CaseTypes } from "../../../data/CaseTypes";
+ import { LogType } from "../../../data/LogType";
+@@ -11,6 +10,7 @@ import { ignoreEvent } from "../functions/ignoreEvent";
+ import { isBanned } from "../functions/isBanned";
+ import { IgnoredEventType, modActionsCmd } from "../types";
+ import { LogsPlugin } from "../../Logs/LogsPlugin";
++import { parseReason } from "../functions/parseReason";
+
+ export const MassunbanCmd = modActionsCmd({
+   trigger: "massunban",
+@@ -37,8 +37,10 @@ export const MassunbanCmd = modActionsCmd({
+       sendErrorMessage(pluginData, msg.channel, "Cancelled");
+       return;
+     }
+-
+-    const unbanReason = formatReasonWithAttachments(unbanReasonReply.content, [...msg.attachments.values()]);
++    const config = pluginData.config.get();
++    const unbanReason = formatReasonWithAttachments(parseReason(config, unbanReasonReply.content), [
++      ...msg.attachments.values(),
++    ]);
+
+     // Ignore automatic unban cases and logs for these users
+     // We'll create our own cases below and post a single "mass unbanned" log instead
+diff --git a/backend/src/plugins/ModActions/commands/MassmuteCmd.ts b/backend/src/plugins/ModActions/commands/MassmuteCmd.ts
+index ecd696dff..96b54be8c 100644
+--- a/backend/src/plugins/ModActions/commands/MassmuteCmd.ts
++++ b/backend/src/plugins/ModActions/commands/MassmuteCmd.ts
+@@ -1,6 +1,5 @@
+ import { Snowflake, TextChannel } from "discord.js";
+ import { waitForReply } from "knub/dist/helpers";
+-import { userToTemplateSafeUser } from "../../../utils/templateSafeObjects";
+ import { commandTypeHelpers as ct } from "../../../commandTypes";
+ import { LogType } from "../../../data/LogType";
+ import { logger } from "../../../logger";
+@@ -9,6 +8,7 @@ import { canActOn, sendErrorMessage, sendSuccessMessage } from "../../../pluginU
+ import { formatReasonWithAttachments } from "../functions/formatReasonWithAttachments";
+ import { modActionsCmd } from "../types";
+ import { LogsPlugin } from "../../Logs/LogsPlugin";
++import { parseReason } from "../functions/parseReason";
+
+ export const MassmuteCmd = modActionsCmd({
+   trigger: "massmute",
+@@ -40,7 +40,10 @@ export const MassmuteCmd = modActionsCmd({
+       return;
+     }
+
+-    const muteReason = formatReasonWithAttachments(muteReasonReceived.content, [...msg.attachments.values()]);
++    const config = pluginData.config.get();
++    const muteReason = formatReasonWithAttachments(parseReason(config, muteReasonReceived.content), [
++      ...msg.attachments.values(),
++    ]);
+
+     // Verify we can act upon all users
+     for (const userId of args.userIds) {
+diff --git a/backend/src/plugins/ModActions/commands/UnbanCmd.ts b/backend/src/plugins/ModActions/commands/UnbanCmd.ts
+index 2c9bbfd34..5c38d62e6 100644
+--- a/backend/src/plugins/ModActions/commands/UnbanCmd.ts
++++ b/backend/src/plugins/ModActions/commands/UnbanCmd.ts
+@@ -1,5 +1,4 @@
+ import { Snowflake } from "discord.js";
+-import { userToTemplateSafeUser } from "../../../utils/templateSafeObjects";
+ import { commandTypeHelpers as ct } from "../../../commandTypes";
+ import { CaseTypes } from "../../../data/CaseTypes";
+ import { LogType } from "../../../data/LogType";
+@@ -11,6 +10,7 @@ import { ignoreEvent } from "../functions/ignoreEvent";
+ import { IgnoredEventType, modActionsCmd } from "../types";
+ import { LogsPlugin } from "../../Logs/LogsPlugin";
+ import { clearExpiringTempban } from "../../../data/loops/expiringTempbansLoop";
++import { parseReason } from "../functions/parseReason";
+
+ const opts = {
+   mod: ct.member({ option: true }),
+@@ -49,7 +49,8 @@ export const UnbanCmd = modActionsCmd({
+     }
+
+     pluginData.state.serverLogs.ignoreLog(LogType.MEMBER_UNBAN, user.id);
+-    const reason = formatReasonWithAttachments(args.reason, [...msg.attachments.values()]);
++    const config = pluginData.config.get();
++    const reason = formatReasonWithAttachments(parseReason(config, args.reason), [...msg.attachments.values()]);
+
+     try {
+       ignoreEvent(pluginData, IgnoredEventType.Unban, user.id);
+diff --git a/backend/src/plugins/ModActions/commands/WarnCmd.ts b/backend/src/plugins/ModActions/commands/WarnCmd.ts
+index 03d79b765..d051b0671 100644
+--- a/backend/src/plugins/ModActions/commands/WarnCmd.ts
++++ b/backend/src/plugins/ModActions/commands/WarnCmd.ts
+@@ -7,6 +7,7 @@ import { waitForButtonConfirm } from "../../../utils/waitForInteraction";
+ import { CasesPlugin } from "../../Cases/CasesPlugin";
+ import { formatReasonWithAttachments } from "../functions/formatReasonWithAttachments";
+ import { isBanned } from "../functions/isBanned";
++import { parseReason } from "../functions/parseReason";
+ import { readContactMethodsFromArgs } from "../functions/readContactMethodsFromArgs";
+ import { warnMember } from "../functions/warnMember";
+ import { modActionsCmd } from "../types";
+@@ -63,7 +64,7 @@ export const WarnCmd = modActionsCmd({
+     }
+
+     const config = pluginData.config.get();
+-    const reason = formatReasonWithAttachments(args.reason, [...msg.attachments.values()]);
++    const reason = formatReasonWithAttachments(parseReason(config, args.reason), [...msg.attachments.values()]);
+
+     const casesPlugin = pluginData.getPlugin(CasesPlugin);
+     const priorWarnAmount = await casesPlugin.getCaseTypeAmountForUserId(memberToWarn.id, CaseTypes.Warn);
+diff --git a/backend/src/plugins/ModActions/functions/actualKickMemberCmd.ts b/backend/src/plugins/ModActions/functions/actualKickMemberCmd.ts
+index 92178edc8..949efcf4c 100644
+--- a/backend/src/plugins/ModActions/functions/actualKickMemberCmd.ts
++++ b/backend/src/plugins/ModActions/functions/actualKickMemberCmd.ts
+@@ -1,4 +1,4 @@
+-import { GuildMember, TextChannel, ThreadChannel } from "discord.js";
++import { GuildMember, Message, TextChannel, ThreadChannel } from "discord.js";
+ import { GuildPluginData } from "knub";
+ import { hasPermission } from "knub/dist/helpers";
+ import { LogType } from "../../../data/LogType";
+@@ -9,11 +9,12 @@ import { formatReasonWithAttachments } from "./formatReasonWithAttachments";
+ import { ignoreEvent } from "./ignoreEvent";
+ import { isBanned } from "./isBanned";
+ import { kickMember } from "./kickMember";
++import { parseReason } from "./parseReason";
+ import { readContactMethodsFromArgs } from "./readContactMethodsFromArgs";
+
+ export async function actualKickMemberCmd(
+   pluginData: GuildPluginData<ModActionsPluginType>,
+-  msg,
++  msg: Message,
+   args: {
+     user: string;
+     reason: string;
+@@ -24,8 +25,9 @@ export async function actualKickMemberCmd(
+   },
+ ) {
+   const user = await resolveUser(pluginData.client, args.user);
+-  if (!user.id) {
+-    sendErrorMessage(pluginData, msg.channel, `User not found`);
++  const channel = msg.channel as TextChannel;
++  if (!user.id || !msg.member) {
++    sendErrorMessage(pluginData, channel, `User not found`);
+     return;
+   }
+
+@@ -34,9 +36,9 @@ export async function actualKickMemberCmd(
+   if (!memberToKick) {
+     const banned = await isBanned(pluginData, user.id);
+     if (banned) {
+-      sendErrorMessage(pluginData, msg.channel, `User is banned`);
++      sendErrorMessage(pluginData, channel, `User is banned`);
+     } else {
+-      sendErrorMessage(pluginData, msg.channel, `User not found on the server`);
++      sendErrorMessage(pluginData, channel, `User not found on the server`);
+     }
+
+     return;
+@@ -44,7 +46,7 @@ export async function actualKickMemberCmd(
+
+   // Make sure we're allowed to kick this member
+   if (!canActOn(pluginData, msg.member, memberToKick)) {
+-    sendErrorMessage(pluginData, msg.channel, "Cannot kick: insufficient permissions");
++    sendErrorMessage(pluginData, channel, "Cannot kick: insufficient permissions");
+     return;
+   }
+
+@@ -52,7 +54,7 @@ export async function actualKickMemberCmd(
+   let mod = msg.member;
+   if (args.mod) {
+     if (!(await hasPermission(await pluginData.config.getForMessage(msg), "can_act_as_other"))) {
+-      sendErrorMessage(pluginData, msg.channel, "You don't have permission to use -mod");
++      sendErrorMessage(pluginData, channel, "You don't have permission to use -mod");
+       return;
+     }
+
+@@ -63,17 +65,18 @@ export async function actualKickMemberCmd(
+   try {
+     contactMethods = readContactMethodsFromArgs(args);
+   } catch (e) {
+-    sendErrorMessage(pluginData, msg.channel, e.message);
++    sendErrorMessage(pluginData, channel, e.message);
+     return;
+   }
+
+-  const reason = formatReasonWithAttachments(args.reason, msg.attachments);
++  const config = pluginData.config.get();
++  const reason = formatReasonWithAttachments(parseReason(config, args.reason), [...msg.attachments.values()]);
+
+   const kickResult = await kickMember(pluginData, memberToKick, reason, {
+     contactMethods,
+     caseArgs: {
+       modId: mod.id,
+-      ppId: mod.id !== msg.author.id ? msg.author.id : null,
++      ppId: mod.id !== msg.author.id ? msg.author.id : undefined,
+     },
+   });
+
+@@ -84,7 +87,7 @@ export async function actualKickMemberCmd(
+     try {
+       await memberToKick.ban({ days: 1, reason: "kick -clean" });
+     } catch {
+-      sendErrorMessage(pluginData, msg.channel, "Failed to ban the user to clean messages (-clean)");
++      sendErrorMessage(pluginData, channel, "Failed to ban the user to clean messages (-clean)");
+     }
+
+     pluginData.state.serverLogs.ignoreLog(LogType.MEMBER_UNBAN, memberToKick.id);
+@@ -93,7 +96,7 @@ export async function actualKickMemberCmd(
+     try {
+       await pluginData.guild.bans.remove(memberToKick.id, "kick -clean");
+     } catch {
+-      sendErrorMessage(pluginData, msg.channel, "Failed to unban the user after banning them (-clean)");
++      sendErrorMessage(pluginData, channel, "Failed to unban the user after banning them (-clean)");
+     }
+   }
+
+@@ -106,5 +109,5 @@ export async function actualKickMemberCmd(
+   let response = `Kicked **${memberToKick.user.tag}** (Case #${kickResult.case.case_number})`;
+
+   if (kickResult.notifyResult.text) response += ` (${kickResult.notifyResult.text})`;
+-  sendSuccessMessage(pluginData, msg.channel, response);
++  sendSuccessMessage(pluginData, channel, response);
+ }
+diff --git a/backend/src/plugins/ModActions/functions/actualMuteUserCmd.ts b/backend/src/plugins/ModActions/functions/actualMuteUserCmd.ts
+index 6a750fd5a..acccf619d 100644
+--- a/backend/src/plugins/ModActions/functions/actualMuteUserCmd.ts
++++ b/backend/src/plugins/ModActions/functions/actualMuteUserCmd.ts
+@@ -9,6 +9,7 @@ import { MutesPlugin } from "../../Mutes/MutesPlugin";
+ import { MuteResult } from "../../Mutes/types";
+ import { ModActionsPluginType } from "../types";
+ import { formatReasonWithAttachments } from "./formatReasonWithAttachments";
++import { parseReason } from "./parseReason";
+ import { readContactMethodsFromArgs } from "./readContactMethodsFromArgs";
+
+ /**
+@@ -42,7 +43,10 @@ export async function actualMuteUserCmd(
+   }
+
+   const timeUntilUnmute = args.time && humanizeDuration(args.time);
+-  const reason = args.reason ? formatReasonWithAttachments(args.reason, [...msg.attachments.values()]) : undefined;
++  const config = pluginData.config.get();
++  const reason = args.reason
++    ? formatReasonWithAttachments(parseReason(config, args.reason), [...msg.attachments.values()])
++    : undefined;
+
+   let muteResult: MuteResult;
+   const mutesPlugin = pluginData.getPlugin(MutesPlugin);
+diff --git a/backend/src/plugins/ModActions/functions/actualUnmuteUserCmd.ts b/backend/src/plugins/ModActions/functions/actualUnmuteUserCmd.ts
+index 46ab7be60..0be832e35 100644
+--- a/backend/src/plugins/ModActions/functions/actualUnmuteUserCmd.ts
++++ b/backend/src/plugins/ModActions/functions/actualUnmuteUserCmd.ts
+@@ -6,6 +6,7 @@ import { hasPermission, sendErrorMessage, sendSuccessMessage } from "../../../pl
+ import { asSingleLine, UnknownUser } from "../../../utils";
+ import { ModActionsPluginType } from "../types";
+ import { formatReasonWithAttachments } from "./formatReasonWithAttachments";
++import { parseReason } from "./parseReason";
+
+ export async function actualUnmuteCmd(
+   pluginData: GuildPluginData<ModActionsPluginType>,
+@@ -27,7 +28,10 @@ export async function actualUnmuteCmd(
+     pp = msg.author;
+   }
+
+-  const reason = args.reason ? formatReasonWithAttachments(args.reason, [...msg.attachments.values()]) : undefined;
++  const config = pluginData.config.get();
++  const reason = args.reason
++    ? formatReasonWithAttachments(parseReason(config, args.reason), [...msg.attachments.values()])
++    : undefined;
+
+   const mutesPlugin = pluginData.getPlugin(MutesPlugin);
+   const result = await mutesPlugin.unmuteUser(user.id, args.time, {
+diff --git a/backend/src/plugins/ModActions/functions/banUserId.ts b/backend/src/plugins/ModActions/functions/banUserId.ts
+index 21d027381..bb7f691e2 100644
+--- a/backend/src/plugins/ModActions/functions/banUserId.ts
++++ b/backend/src/plugins/ModActions/functions/banUserId.ts
+@@ -20,6 +20,7 @@ import { getDefaultContactMethods } from "./getDefaultContactMethods";
+ import { ignoreEvent } from "./ignoreEvent";
+ import { LogsPlugin } from "../../Logs/LogsPlugin";
+ import { registerExpiringTempban } from "../../../data/loops/expiringTempbansLoop";
++import { parseReason } from "./parseReason";
+
+ /**
+  * Ban the specified user id, whether or not they're actually on the server at the time. Generates a case.
+@@ -39,6 +40,7 @@ export async function banUserId(
+       error: "Invalid user",
+     };
+   }
++  reason &&= parseReason(config, reason);
+
+   // Attempt to message the user *before* banning them, as doing it after may not be possible
+   let notifyResult: UserNotificationResult = { method: null, success: true };
+diff --git a/backend/src/plugins/ModActions/functions/kickMember.ts b/backend/src/plugins/ModActions/functions/kickMember.ts
+index d70722a1d..971687ca1 100644
+--- a/backend/src/plugins/ModActions/functions/kickMember.ts
++++ b/backend/src/plugins/ModActions/functions/kickMember.ts
+@@ -10,6 +10,7 @@ import { IgnoredEventType, KickOptions, KickResult, ModActionsPluginType } from
+ import { getDefaultContactMethods } from "./getDefaultContactMethods";
+ import { ignoreEvent } from "./ignoreEvent";
+ import { LogsPlugin } from "../../Logs/LogsPlugin";
++import { parseReason } from "./parseReason";
+
+ /**
+  * Kick the specified server member. Generates a case.
+@@ -25,6 +26,7 @@ export async function kickMember(
+   // Attempt to message the user *before* kicking them, as doing it after may not be possible
+   let notifyResult: UserNotificationResult = { method: null, success: true };
+   if (reason) {
++    reason = parseReason(config, reason);
+     const contactMethods = kickOptions?.contactMethods
+       ? kickOptions.contactMethods
+       : getDefaultContactMethods(pluginData, "kick");
+diff --git a/backend/src/plugins/ModActions/functions/parseReason.ts b/backend/src/plugins/ModActions/functions/parseReason.ts
+new file mode 100644
+index 000000000..a73b0ff3b
+--- /dev/null
++++ b/backend/src/plugins/ModActions/functions/parseReason.ts
+@@ -0,0 +1,14 @@
++import { TConfigSchema } from "../types";
++
++const MAX_REASON_LENGTH = 512;
++
++export function parseReason(config: TConfigSchema, reason: string): string {
++  if (!reason) return reason;
++  if (config?.reason_aliases) {
++    reason = config.reason_aliases[reason.toLowerCase()] ?? reason;
++  }
++  if (reason!.length > MAX_REASON_LENGTH) {
++    reason = reason!.substring(0, MAX_REASON_LENGTH - 4) + " […]";
++  }
++  return reason;
++}
+diff --git a/backend/src/plugins/ModActions/functions/updateCase.ts b/backend/src/plugins/ModActions/functions/updateCase.ts
+index 2a1974be4..518e763fe 100644
+--- a/backend/src/plugins/ModActions/functions/updateCase.ts
++++ b/backend/src/plugins/ModActions/functions/updateCase.ts
+@@ -6,8 +6,11 @@ import { CasesPlugin } from "../../../plugins/Cases/CasesPlugin";
+ import { sendErrorMessage, sendSuccessMessage } from "../../../pluginUtils";
+ import { formatReasonWithAttachments } from "./formatReasonWithAttachments";
+ import { LogsPlugin } from "../../Logs/LogsPlugin";
++import { parseReason } from "./parseReason.js";
++import { GuildPluginData } from "knub";
++import { ModActionsPluginType } from "../types.js";
+
+-export async function updateCase(pluginData, msg: Message, args) {
++export async function updateCase(pluginData: GuildPluginData<ModActionsPluginType>, msg: Message, args) {
+   let theCase: Case | undefined;
+   if (args.caseNumber != null) {
+     theCase = await pluginData.state.cases.findByCaseNumber(args.caseNumber);
+@@ -24,6 +27,8 @@ export async function updateCase(pluginData, msg: Message, args) {
+     sendErrorMessage(pluginData, msg.channel as TextChannel, "Text or attachment required");
+     return;
+   }
++  const config = pluginData.config.get();
++  args.note &&= parseReason(config, args.note);
+
+   const note = formatReasonWithAttachments(args.note, [...msg.attachments.values()]);
+
+diff --git a/backend/src/plugins/ModActions/functions/warnMember.ts b/backend/src/plugins/ModActions/functions/warnMember.ts
+index e0f22c8f5..c7a315cca 100644
+--- a/backend/src/plugins/ModActions/functions/warnMember.ts
++++ b/backend/src/plugins/ModActions/functions/warnMember.ts
+@@ -1,8 +1,7 @@
+ import { GuildMember, Snowflake } from "discord.js";
+ import { GuildPluginData } from "knub";
+-import { memberToTemplateSafeMember, userToTemplateSafeUser } from "../../../utils/templateSafeObjects";
++import { userToTemplateSafeUser } from "../../../utils/templateSafeObjects";
+ import { CaseTypes } from "../../../data/CaseTypes";
+-import { LogType } from "../../../data/LogType";
+ import { renderTemplate, TemplateSafeValueContainer } from "../../../templateFormatter";
+ import { createUserNotificationError, notifyUser, resolveUser, ucfirst, UserNotificationResult } from "../../../utils";
+ import { waitForButtonConfirm } from "../../../utils/waitForInteraction";
+@@ -10,6 +9,7 @@ import { CasesPlugin } from "../../Cases/CasesPlugin";
+ import { ModActionsPluginType, WarnOptions, WarnResult } from "../types";
+ import { getDefaultContactMethods } from "./getDefaultContactMethods";
+ import { LogsPlugin } from "../../Logs/LogsPlugin";
++import { parseReason } from "./parseReason";
+
+ export async function warnMember(
+   pluginData: GuildPluginData<ModActionsPluginType>,
+@@ -18,7 +18,7 @@ export async function warnMember(
+   warnOptions: WarnOptions = {},
+ ): Promise<WarnResult> {
+   const config = pluginData.config.get();
+-
++  reason = parseReason(config, reason);
+   let notifyResult: UserNotificationResult;
+   if (config.warn_message) {
+     const warnMessage = await renderTemplate(
+diff --git a/backend/src/plugins/ModActions/types.ts b/backend/src/plugins/ModActions/types.ts
+index 16e8e15e7..a705fb511 100644
+--- a/backend/src/plugins/ModActions/types.ts
++++ b/backend/src/plugins/ModActions/types.ts
+@@ -46,6 +46,7 @@ export const ConfigSchema = t.type({
+   can_deletecase: t.boolean,
+   can_act_as_other: t.boolean,
+   create_cases_for_manual_actions: t.boolean,
++  reason_aliases: tNullable(t.record(t.string, t.string)),
+ });
+ export type TConfigSchema = t.TypeOf<typeof ConfigSchema>;
+
+
+From cfc4536f518692d5887893250ae233f43b24bd6d Mon Sep 17 00:00:00 2001
+From: Tiago R <metal@i0.tf>
+Date: Thu, 28 Dec 2023 10:55:02 +0000
+Subject: [PATCH 2/2] fixes
+
+Signed-off-by: GitHub <noreply@github.com>
+---
+ backend/src/plugins/ModActions/ModActionsPlugin.ts          | 2 +-
+ backend/src/plugins/ModActions/commands/AddCaseCmd.ts       | 4 ++--
+ backend/src/plugins/ModActions/commands/ForcebanCmd.ts      | 2 +-
+ backend/src/plugins/ModActions/commands/MassUnbanCmd.ts     | 2 +-
+ backend/src/plugins/ModActions/commands/MassmuteCmd.ts      | 2 +-
+ backend/src/plugins/ModActions/commands/UnbanCmd.ts         | 2 +-
+ .../src/plugins/ModActions/functions/actualKickMemberCmd.ts | 2 +-
+ backend/src/plugins/ModActions/functions/updateCase.ts      | 6 +++---
+ 8 files changed, 11 insertions(+), 11 deletions(-)
+
+diff --git a/backend/src/plugins/ModActions/ModActionsPlugin.ts b/backend/src/plugins/ModActions/ModActionsPlugin.ts
+index 5a197c542..8a19b273d 100644
+--- a/backend/src/plugins/ModActions/ModActionsPlugin.ts
++++ b/backend/src/plugins/ModActions/ModActionsPlugin.ts
+@@ -117,7 +117,7 @@ const defaultOptions = {
+ /**
+  * Config preprocessor to fix values
+  */
+-const configPreprocessor: ConfigPreprocessorFn<ModActionsPluginType> = (options) => {
++const configPreprocessor = (options) => {
+   if (options.config?.reason_aliases) {
+     options.config.reason_aliases = Object.fromEntries(
+       Object.entries(options.config.reason_aliases).map(([k, v]) => [k.toLowerCase(), v]),
+diff --git a/backend/src/plugins/ModActions/commands/AddCaseCmd.ts b/backend/src/plugins/ModActions/commands/AddCaseCmd.ts
+index eb56453f1..2cef2246c 100644
+--- a/backend/src/plugins/ModActions/commands/AddCaseCmd.ts
++++ b/backend/src/plugins/ModActions/commands/AddCaseCmd.ts
+@@ -1,13 +1,13 @@
+ import { commandTypeHelpers as ct } from "../../../commandTypes";
+ import { CaseTypes } from "../../../data/CaseTypes";
+ import { Case } from "../../../data/entities/Case";
+-import { CasesPlugin } from "../../../plugins/Cases/CasesPlugin";
+ import { canActOn, hasPermission, sendErrorMessage, sendSuccessMessage } from "../../../pluginUtils";
++import { CasesPlugin } from "../../../plugins/Cases/CasesPlugin";
+ import { renderUserUsername, resolveMember, resolveUser } from "../../../utils";
+ import { LogsPlugin } from "../../Logs/LogsPlugin";
+ import { formatReasonWithAttachments } from "../functions/formatReasonWithAttachments";
+-import { modActionsCmd } from "../types";
+ import { parseReason } from "../functions/parseReason";
++import { modActionsCmd } from "../types";
+
+ const opts = {
+   mod: ct.member({ option: true }),
+diff --git a/backend/src/plugins/ModActions/commands/ForcebanCmd.ts b/backend/src/plugins/ModActions/commands/ForcebanCmd.ts
+index 8fe67bd61..4ca098eb7 100644
+--- a/backend/src/plugins/ModActions/commands/ForcebanCmd.ts
++++ b/backend/src/plugins/ModActions/commands/ForcebanCmd.ts
+@@ -9,8 +9,8 @@ import { LogsPlugin } from "../../Logs/LogsPlugin";
+ import { formatReasonWithAttachments } from "../functions/formatReasonWithAttachments";
+ import { ignoreEvent } from "../functions/ignoreEvent";
+ import { isBanned } from "../functions/isBanned";
+-import { IgnoredEventType, modActionsCmd } from "../types";
+ import { parseReason } from "../functions/parseReason";
++import { IgnoredEventType, modActionsCmd } from "../types";
+
+ const opts = {
+   mod: ct.member({ option: true }),
+diff --git a/backend/src/plugins/ModActions/commands/MassUnbanCmd.ts b/backend/src/plugins/ModActions/commands/MassUnbanCmd.ts
+index fd2883b20..08bb3e199 100644
+--- a/backend/src/plugins/ModActions/commands/MassUnbanCmd.ts
++++ b/backend/src/plugins/ModActions/commands/MassUnbanCmd.ts
+@@ -9,8 +9,8 @@ import { LogsPlugin } from "../../Logs/LogsPlugin";
+ import { formatReasonWithAttachments } from "../functions/formatReasonWithAttachments";
+ import { ignoreEvent } from "../functions/ignoreEvent";
+ import { isBanned } from "../functions/isBanned";
+-import { IgnoredEventType, modActionsCmd } from "../types";
+ import { parseReason } from "../functions/parseReason";
++import { IgnoredEventType, modActionsCmd } from "../types";
+
+ export const MassunbanCmd = modActionsCmd({
+   trigger: "massunban",
+diff --git a/backend/src/plugins/ModActions/commands/MassmuteCmd.ts b/backend/src/plugins/ModActions/commands/MassmuteCmd.ts
+index 6f49f8029..8f3c181c3 100644
+--- a/backend/src/plugins/ModActions/commands/MassmuteCmd.ts
++++ b/backend/src/plugins/ModActions/commands/MassmuteCmd.ts
+@@ -7,8 +7,8 @@ import { canActOn, sendErrorMessage, sendSuccessMessage } from "../../../pluginU
+ import { MutesPlugin } from "../../../plugins/Mutes/MutesPlugin";
+ import { LogsPlugin } from "../../Logs/LogsPlugin";
+ import { formatReasonWithAttachments } from "../functions/formatReasonWithAttachments";
+-import { modActionsCmd } from "../types";
+ import { parseReason } from "../functions/parseReason";
++import { modActionsCmd } from "../types";
+
+ export const MassmuteCmd = modActionsCmd({
+   trigger: "massmute",
+diff --git a/backend/src/plugins/ModActions/commands/UnbanCmd.ts b/backend/src/plugins/ModActions/commands/UnbanCmd.ts
+index f93419ebf..aaaf05cb2 100644
+--- a/backend/src/plugins/ModActions/commands/UnbanCmd.ts
++++ b/backend/src/plugins/ModActions/commands/UnbanCmd.ts
+@@ -9,8 +9,8 @@ import { resolveUser } from "../../../utils";
+ import { LogsPlugin } from "../../Logs/LogsPlugin";
+ import { formatReasonWithAttachments } from "../functions/formatReasonWithAttachments";
+ import { ignoreEvent } from "../functions/ignoreEvent";
+-import { IgnoredEventType, modActionsCmd } from "../types";
+ import { parseReason } from "../functions/parseReason";
++import { IgnoredEventType, modActionsCmd } from "../types";
+
+ const opts = {
+   mod: ct.member({ option: true }),
+diff --git a/backend/src/plugins/ModActions/functions/actualKickMemberCmd.ts b/backend/src/plugins/ModActions/functions/actualKickMemberCmd.ts
+index 3ff5b8e72..98ff17a7e 100644
+--- a/backend/src/plugins/ModActions/functions/actualKickMemberCmd.ts
++++ b/backend/src/plugins/ModActions/functions/actualKickMemberCmd.ts
+@@ -1,4 +1,4 @@
+-import { GuildMember, GuildTextBasedChannel } from "discord.js";
++import { GuildMember, GuildTextBasedChannel, Message, TextChannel } from "discord.js";
+ import { GuildPluginData } from "knub";
+ import { hasPermission } from "knub/helpers";
+ import { LogType } from "../../../data/LogType";
+diff --git a/backend/src/plugins/ModActions/functions/updateCase.ts b/backend/src/plugins/ModActions/functions/updateCase.ts
+index 946122bc0..d6162117b 100644
+--- a/backend/src/plugins/ModActions/functions/updateCase.ts
++++ b/backend/src/plugins/ModActions/functions/updateCase.ts
+@@ -1,16 +1,16 @@
+ import { Message } from "discord.js";
++import { GuildPluginData } from "knub";
+ import { CaseTypes } from "../../../data/CaseTypes";
+ import { Case } from "../../../data/entities/Case";
+ import { sendErrorMessage, sendSuccessMessage } from "../../../pluginUtils";
+ import { CasesPlugin } from "../../../plugins/Cases/CasesPlugin";
+ import { LogsPlugin } from "../../Logs/LogsPlugin";
+-import { parseReason } from "./parseReason.js";
+-import { GuildPluginData } from "knub";
+ import { ModActionsPluginType } from "../types.js";
+ import { formatReasonWithAttachments } from "./formatReasonWithAttachments";
++import { parseReason } from "./parseReason.js";
+
+ export async function updateCase(pluginData: GuildPluginData<ModActionsPluginType>, msg: Message, args) {
+-  let theCase: Case | undefined;
++  let theCase: Case | null;
+   if (args.caseNumber != null) {
+     theCase = await pluginData.state.cases.findByCaseNumber(args.caseNumber);
+   } else {
+-- 
+2.43.0

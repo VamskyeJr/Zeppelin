@@ -18,6 +18,7 @@ import {
 import { ignoreEvent } from "../../functions/ignoreEvent.js";
 import { isBanned } from "../../functions/isBanned.js";
 import { kickMember } from "../../functions/kickMember.js";
+import { parseReason } from "../../functions/parseReason.js";
 import { IgnoredEventType, ModActionsPluginType } from "../../types.js";
 
 export async function actualKickCmd(
@@ -54,8 +55,10 @@ export async function actualKickCmd(
     return;
   }
 
-  const formattedReason = await formatReasonWithMessageLinkForAttachments(pluginData, reason, context, attachments);
-  const formattedReasonWithAttachments = formatReasonWithAttachments(reason, attachments);
+  const config = pluginData.config.get();
+  const parsedReason = parseReason(config, reason) ?? reason;
+  const formattedReason = await formatReasonWithMessageLinkForAttachments(pluginData, parsedReason, context, attachments);
+  const formattedReasonWithAttachments = formatReasonWithAttachments(parsedReason, attachments);
 
   const kickResult = await kickMember(pluginData, memberToKick, formattedReason, formattedReasonWithAttachments, {
     contactMethods,

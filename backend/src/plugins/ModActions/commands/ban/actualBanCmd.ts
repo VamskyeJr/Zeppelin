@@ -17,6 +17,7 @@ import {
   formatReasonWithMessageLinkForAttachments,
 } from "../../functions/formatReasonForAttachments.js";
 import { isBanned } from "../../functions/isBanned.js";
+import { parseReason } from "../../functions/parseReason.js";
 import { ModActionsPluginType } from "../../types.js";
 
 export async function actualBanCmd(
@@ -35,9 +36,11 @@ export async function actualBanCmd(
     return;
   }
 
+  const config = pluginData.config.get();
+  const parsedReason = parseReason(config, reason) ?? reason;
   const memberToBan = await resolveMember(pluginData.client, pluginData.guild, user.id);
-  const formattedReason = await formatReasonWithMessageLinkForAttachments(pluginData, reason, context, attachments);
-  const formattedReasonWithAttachments = formatReasonWithAttachments(reason, attachments);
+  const formattedReason = await formatReasonWithMessageLinkForAttachments(pluginData, parsedReason, context, attachments);
+  const formattedReasonWithAttachments = formatReasonWithAttachments(parsedReason, attachments);
 
   // acquire a lock because of the needed user-inputs below (if banned/not on server)
   const lock = await pluginData.locks.acquire(banLock(user));

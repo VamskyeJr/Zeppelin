@@ -6,6 +6,7 @@ import { CasesPlugin } from "../../../Cases/CasesPlugin.js";
 import { LogsPlugin } from "../../../Logs/LogsPlugin.js";
 import { handleAttachmentLinkDetectionAndGetRestriction } from "../../functions/attachmentLinkReaction.js";
 import { formatReasonWithMessageLinkForAttachments } from "../../functions/formatReasonForAttachments.js";
+import { parseReason } from "../../functions/parseReason.js";
 import { ModActionsPluginType } from "../../types.js";
 
 export async function actualNoteCmd(
@@ -20,8 +21,10 @@ export async function actualNoteCmd(
     return;
   }
 
+  const config = pluginData.config.get();
+  const parsedNote = parseReason(config, note) ?? note;
   const userName = renderUsername(user);
-  const reason = await formatReasonWithMessageLinkForAttachments(pluginData, note, context, attachments);
+  const reason = await formatReasonWithMessageLinkForAttachments(pluginData, parsedNote, context, attachments);
 
   const casesPlugin = pluginData.getPlugin(CasesPlugin);
   const createdCase = await casesPlugin.createCase({

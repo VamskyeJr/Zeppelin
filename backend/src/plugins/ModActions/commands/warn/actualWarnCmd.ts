@@ -9,6 +9,7 @@ import {
   formatReasonWithAttachments,
   formatReasonWithMessageLinkForAttachments,
 } from "../../functions/formatReasonForAttachments.js";
+import { parseReason } from "../../functions/parseReason.js";
 import { warnMember } from "../../functions/warnMember.js";
 import { ModActionsPluginType } from "../../types.js";
 
@@ -27,8 +28,9 @@ export async function actualWarnCmd(
   }
 
   const config = pluginData.config.get();
-  const formattedReason = await formatReasonWithMessageLinkForAttachments(pluginData, reason, context, attachments);
-  const formattedReasonWithAttachments = formatReasonWithAttachments(reason, attachments);
+  const parsedReason = parseReason(config, reason) ?? reason;
+  const formattedReason = await formatReasonWithMessageLinkForAttachments(pluginData, parsedReason, context, attachments);
+  const formattedReasonWithAttachments = formatReasonWithAttachments(parsedReason, attachments);
 
   const casesPlugin = pluginData.getPlugin(CasesPlugin);
   const priorWarnAmount = await casesPlugin.getCaseTypeAmountForUserId(memberToWarn.id, CaseTypes.Warn);
