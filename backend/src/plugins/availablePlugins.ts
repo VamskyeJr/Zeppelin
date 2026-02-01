@@ -80,6 +80,8 @@ import { WelcomeMessagePlugin } from "./WelcomeMessage/WelcomeMessagePlugin.js";
 import { welcomeMessagePluginDocs } from "./WelcomeMessage/docs.js";
 import { CommandAliasesPlugin } from "./CommandAliases/CommandAliasesPlugin.js";
 import { commandAliasesPluginDocs } from "./CommandAliases/docs.js";
+import { SocialMediaPosterPlugin } from "./SocialMediaPoster/SocialMediaPosterPlugin.js";
+import { socialMediaPosterPluginDocs } from "./SocialMediaPoster/docs.js";
 
 export const availableGuildPlugins: ZeppelinGuildPluginInfo[] = [
   {
@@ -217,6 +219,10 @@ export const availableGuildPlugins: ZeppelinGuildPluginInfo[] = [
   {
     plugin: StarboardPlugin,
     docs: starboardPluginDocs,
+  },
+  {
+    plugin: SocialMediaPosterPlugin,
+    docs: socialMediaPosterPluginDocs,
   },
   {
     plugin: TagsPlugin,
