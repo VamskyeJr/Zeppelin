@@ -1,4 +1,3 @@
-import { ChatInputCommandInteraction, Message } from "discord.js";
 import { EventEmitter } from "events";
 import {
   BasePluginType,
@@ -152,7 +151,6 @@ export type WarnMemberNotifyRetryCallback = () => boolean | Promise<boolean>;
 export interface WarnOptions {
   caseArgs?: Partial<CaseArgs> | null;
   contactMethods?: UserNotificationMethod[] | null;
-  retryPromptContext?: Message | ChatInputCommandInteraction | null;
   isAutomodAction?: boolean;
 }
 

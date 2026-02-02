@@ -14,7 +14,6 @@ import {
   notifyUser,
   resolveMember,
   resolveUser,
-  ucfirst,
 } from "../../../utils.js";
 import { userToTemplateSafeUser } from "../../../utils/templateSafeObjects.js";
 import { CasesPlugin } from "../../Cases/CasesPlugin.js";
@@ -149,11 +148,9 @@ export async function banUserId(
   const modId = banOptions.caseArgs?.modId || pluginData.client.user!.id;
   const casesPlugin = pluginData.getPlugin(CasesPlugin);
 
-  const noteDetails: string[] = [];
   const timeUntilUnban = banTime ? humanizeDuration(banTime) : "indefinite";
   const timeDetails = `Banned ${banTime ? `for ${timeUntilUnban}` : "indefinitely"}`;
-  if (notifyResult.text) noteDetails.push(ucfirst(notifyResult.text));
-  noteDetails.push(timeDetails);
+  const noteDetails: string[] = [timeDetails];
 
   const createdCase = await casesPlugin.createCase({
     ...(banOptions.caseArgs || {}),

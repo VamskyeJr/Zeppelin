@@ -7,7 +7,6 @@ import {
   createUserNotificationError,
   notifyUser,
   resolveUser,
-  ucfirst,
   UserNotificationResult,
 } from "../../../utils.js";
 import { userToTemplateSafeUser } from "../../../utils/templateSafeObjects.js";
@@ -89,7 +88,7 @@ export async function kickMember(
     modId,
     type: CaseTypes.Kick,
     reason,
-    noteDetails: notifyResult.text ? [ucfirst(notifyResult.text)] : [],
+    noteDetails: [],
   });
 
   // Log the action

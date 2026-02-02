@@ -75,7 +75,7 @@ export async function actualBanCmd(
       // Ask the mod if we should update the existing ban
       const reply = await waitForButtonConfirm(
         context,
-        { content: "Failed to message the user. Log the warning anyway?" },
+        { content: "User is already banned, update existing ban?" },
         { confirmText: "Yes", cancelText: "No", restrictToId: author.id },
       );
 

@@ -7,10 +7,8 @@ import {
   createUserNotificationError,
   notifyUser,
   resolveUser,
-  ucfirst,
 } from "../../../utils.js";
 import { userToTemplateSafeUser } from "../../../utils/templateSafeObjects.js";
-import { waitForButtonConfirm } from "../../../utils/waitForInteraction.js";
 import { CasesPlugin } from "../../Cases/CasesPlugin.js";
 import { LogsPlugin } from "../../Logs/LogsPlugin.js";
 import { ModActionsPluginType, WarnOptions, WarnResult } from "../types.js";
@@ -56,27 +54,7 @@ export async function warnMember(
     notifyResult = createUserNotificationError("No warn message specified in config");
   }
 
-  if (!notifyResult.success) {
-    if (!warnOptions.retryPromptContext) {
-      return {
-        status: "failed",
-        error: "Failed to message user",
-      };
-    }
-
-    const reply = await waitForButtonConfirm(
-      warnOptions.retryPromptContext,
-      { content: "Failed to message the user. Log the warning anyway?" },
-      { confirmText: "Yes", cancelText: "No", restrictToId: warnOptions.caseArgs?.modId },
-    );
-
-    if (!reply) {
-      return {
-        status: "failed",
-        error: "Failed to message user",
-      };
-    }
-  }
+  // Continue to log the warning even if DM notification failed
 
   const modId = warnOptions.caseArgs?.modId ?? pluginData.client.user!.id;
 
@@ -87,7 +65,7 @@ export async function warnMember(
     modId,
     type: CaseTypes.Warn,
     reason,
-    noteDetails: notifyResult.text ? [ucfirst(notifyResult.text)] : [],
+    noteDetails: [],
   });
 
   const mod = await pluginData.guild.members.fetch(modId as Snowflake);

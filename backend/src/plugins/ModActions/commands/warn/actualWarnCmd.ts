@@ -53,7 +53,6 @@ export async function actualWarnCmd(
       ppId: mod.id !== authorId ? authorId : undefined,
       reason: formattedReason,
     },
-    retryPromptContext: context,
   });
 
   if (warnResult.status === "failed") {
@@ -63,8 +62,6 @@ export async function actualWarnCmd(
 
     return;
   }
-
-  const messageResultText = warnResult.notifyResult.text ? ` (${warnResult.notifyResult.text})` : "";
 
   await pluginData.state.common.sendSuccessMessage(
     context,
