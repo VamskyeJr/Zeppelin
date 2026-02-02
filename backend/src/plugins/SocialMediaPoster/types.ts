@@ -1,12 +1,12 @@
 import { BasePluginType, guildPluginEventListener } from "vety";
 import { z } from "zod";
 import { GuildSocialPosts } from "../../data/GuildSocialPosts.js";
-import { zBoundedCharacters, zBoundedRecord, zSnowflake, zStrictMessageContent } from "../../utils.js";
+import { zBoundedCharacters, zBoundedRecord, zMessageContent, zSnowflake } from "../../utils.js";
 
 export const zPlatformPath = z.strictObject({
   enabled: z.boolean().default(false),
   channels: z.array(zSnowflake),
-  message: zStrictMessageContent,
+  message: zMessageContent,
   poll_interval: zBoundedCharacters(1, 32).nullable().default("60s"),
   post_poll_count: z.number().min(1).max(100).nullable().default(10),
 });

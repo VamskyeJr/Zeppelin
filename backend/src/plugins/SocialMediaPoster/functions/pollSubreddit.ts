@@ -1,7 +1,7 @@
 import { ChannelType, TextChannel } from "discord.js";
 import { GuildPluginData } from "vety";
 import { renderTemplate, TemplateSafeValueContainer } from "../../../templateFormatter.js";
-import { renderRecursively, zStrictMessageContent } from "../../../utils.js";
+import { renderRecursively, validateAndParseMessageContent } from "../../../utils.js";
 import { LogsPlugin } from "../../Logs/LogsPlugin.js";
 import { SocialMediaPosterPluginType, TPlatformPath } from "../types.js";
 
@@ -105,11 +105,13 @@ export async function pollSubreddit(
 
     if (!formatted) continue;
 
-    // Validate the message content
-    const parsed = zStrictMessageContent.safeParse(formatted);
-    if (!parsed.success) continue;
-
-    const messageContent = parsed.data;
+    // Validate and parse the message content (handles both string and object formats)
+    let messageContent;
+    try {
+      messageContent = validateAndParseMessageContent(formatted);
+    } catch {
+      continue;
+    }
 
     for (const channelId of subreddit.channels) {
       try {
