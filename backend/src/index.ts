@@ -28,6 +28,8 @@ import { FishFishError, initFishFish } from "./data/FishFish.js";
 import { GuildLogs } from "./data/GuildLogs.js";
 import { LogType } from "./data/LogType.js";
 import { dataSource } from "./data/dataSource.js";
+import { Case } from "./data/entities/Case.js";
+import { CaseTypes } from "./data/CaseTypes.js";
 import { connect } from "./data/db.js";
 import { runExpiredArchiveDeletionLoop } from "./data/loops/expiredArchiveDeletionLoop.js";
 import { runExpiredMemberCacheDeletionLoop } from "./data/loops/expiredMemberCacheDeletionLoop.js";
@@ -358,9 +360,6 @@ connect().then(async () => {
             }
 
             // Remove deprecated properties some may still have in their config
-            client.user?.setPresence({
-  activities: [{ name: "Roblox fuck everything up", type: ActivityType.Watching }],
-});
             delete loaded.success_emoji;
             delete loaded.error_emoji;
 
@@ -446,6 +445,43 @@ connect().then(async () => {
     runExpiredMemberCacheDeletionLoop();
     await sleep(10 * SECONDS);
     runMemberCacheDeletionLoop();
+
+    // Rotating status
+    let statusIndex = 0;
+    const updateStatus = async () => {
+      try {
+        const caseRepository = dataSource.getRepository(Case);
+        const totalMembers = client.guilds.cache.reduce((acc, guild) => acc + guild.memberCount, 0);
+        const totalServers = client.guilds.cache.size;
+        
+        const warnCount = await caseRepository.count({ where: { type: CaseTypes.Warn } });
+        const banCount = await caseRepository.count({ where: { type: CaseTypes.Ban } });
+        const kickCount = await caseRepository.count({ where: { type: CaseTypes.Kick } });
+        const muteCount = await caseRepository.count({ where: { type: CaseTypes.Mute } });
+
+        const statuses = [
+          { name: `${totalMembers.toLocaleString()} members`, type: ActivityType.Watching },
+          { name: `${warnCount.toLocaleString()} warnings issued`, type: ActivityType.Watching },
+          { name: `${banCount.toLocaleString()} bans issued`, type: ActivityType.Watching },
+          { name: `${kickCount.toLocaleString()} kicks issued`, type: ActivityType.Watching },
+          { name: `${muteCount.toLocaleString()} mutes issued`, type: ActivityType.Watching },
+          { name: `${totalServers.toLocaleString()} servers`, type: ActivityType.Watching },
+        ];
+
+        const status = statuses[statusIndex % statuses.length];
+        client.user?.setPresence({
+          activities: [status],
+        });
+        statusIndex++;
+      } catch (err) {
+        console.error("Failed to update status:", err);
+      }
+    };
+
+    // Initial status update
+    await updateStatus();
+    // Update status every 30 seconds
+    setInterval(updateStatus, 30 * SECONDS);
   });
 
   let lowestGlobalRemaining = Infinity;
