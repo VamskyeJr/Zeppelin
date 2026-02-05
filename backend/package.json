@@ -63,7 +63,7 @@
     "threads": "^1.7.0",
     "tlds": "^1.221.1",
     "tmp": "0.2.5",
-    "tsconfig-paths": "^3.9.0",
+    "tsconfig-paths": "^4.2.0",
     "twemoji": "^12.1.4",
     "typeorm": "^0.3.27",
     "utf-8-validate": "^5.0.5",
