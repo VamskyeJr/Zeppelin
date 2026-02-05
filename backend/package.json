@@ -64,7 +64,7 @@
     "tlds": "^1.221.1",
     "tmp": "0.2.5",
     "tsconfig-paths": "^3.9.0",
-    "twemoji": "^12.1.4",
+    "twemoji": "^14.0.2",
     "typeorm": "^0.3.27",
     "utf-8-validate": "^5.0.5",
     "uuid": "^9.0.0",
